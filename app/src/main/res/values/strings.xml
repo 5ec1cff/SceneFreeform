@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">SceneFreeform</string>
+    <string name="title_activity_settings">SettingsActivity</string>
+    <string name="basic_header">Basic</string>
+
+    <!-- Sync Preferences -->
+    <string name="notification_hook_title">Notification Hook</string>
+    <string name="start_activity_hook_title">Start Activity Hook</string>
+    <string name="notification_hook_key">notificationHook</string>
+    <string name="start_activity_hook_key">startActivityHook</string>
+</resources>

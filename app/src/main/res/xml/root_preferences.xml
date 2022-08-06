@@ -1,0 +1,17 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/basic_header">
+
+        <SwitchPreferenceCompat
+            app:persistent="false"
+            app:key="@string/notification_hook_key"
+            app:title="@string/notification_hook_title" />
+
+        <SwitchPreferenceCompat
+            app:persistent="false"
+            app:key="@string/start_activity_hook_key"
+            app:title="@string/start_activity_hook_title" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
