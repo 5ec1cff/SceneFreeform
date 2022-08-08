@@ -3,6 +3,7 @@ package five.ec1cff.scene_freeform.hook
 import android.content.ComponentName
 import android.content.Intent
 import android.os.Binder
+import android.os.Build
 import android.os.Bundle
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.factory.normalClass
@@ -157,48 +158,42 @@ object SystemServerHooker: YukiBaseHooker() {
         updateState(key)
         val classIApplicationThread = findClass("android.app.IApplicationThread").normalClass!!
         val classProfilerInfo = findClass("android.app.ProfilerInfo").normalClass!!
-        // TODO: on Android >= 11, hook ActivityStarter
         "com.android.server.wm.ActivityTaskManagerService".hook {
-            /*
-            injectMember {
-                method {
-                    name = "startActivity"
-                    param(
-                        classIApplicationThread, // caller
-                        String::class.java, // callingPackage
-                        String::class.java, // callingFeatureId
-                        IntentClass, // intent
-                        String::class.java, // resolvedType
-                        IBinderClass, // resultTo
-                        String::class.java, // resultWho
-                        Integer.TYPE, // requestCode
-                        Integer.TYPE, // flags
-                        classProfilerInfo, // ProfilerInfo
-                        BundleClass // options
-                    )
-                }
-                beforeHook {
-                    this.beforeHookCommon()
-                }
-            }
-            */
             injectMember {
                 method {
                     name = "startActivityAsUser"
-                    param(
-                        classIApplicationThread, // caller
-                        String::class.java, // callingPackage
-                        String::class.java, // callingFeatureId
-                        IntentClass, // intent
-                        String::class.java, // resolvedType
-                        IBinderClass, // resultTo
-                        String::class.java, // resultWho
-                        Integer.TYPE, // requestCode
-                        Integer.TYPE, // flags
-                        classProfilerInfo, // ProfilerInfo
-                        BundleClass, // options
-                        Integer.TYPE // userId
-                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        param(
+                            classIApplicationThread, // caller
+                            String::class.java, // callingPackage
+                            String::class.java, // callingFeatureId
+                            IntentClass, // intent
+                            String::class.java, // resolvedType
+                            IBinderClass, // resultTo
+                            String::class.java, // resultWho
+                            Integer.TYPE, // requestCode
+                            Integer.TYPE, // startFlags
+                            classProfilerInfo, // ProfilerInfo
+                            BundleClass, // bOptions
+                            Integer.TYPE, // userId
+                            java.lang.Boolean.TYPE // validateIncomingUser
+                        )
+                    } else {
+                        param(
+                            classIApplicationThread, // caller
+                            String::class.java, // callingPackage
+                            IntentClass, // intent
+                            String::class.java, // resolvedType
+                            IBinderClass, // resultTo
+                            String::class.java, // resultWho
+                            Integer.TYPE, // requestCode
+                            Integer.TYPE, // startFlags
+                            classProfilerInfo, // ProfilerInfo
+                            BundleClass, // bOptions
+                            Integer.TYPE, // userId
+                            java.lang.Boolean.TYPE // validateIncomingUser
+                        )
+                    }
                 }
                 beforeHook {
                     this.beforeHookCommon()
@@ -230,20 +225,36 @@ object SystemServerHooker: YukiBaseHooker() {
             injectMember {
                 method {
                     name = "startActivityAndWait"
-                    param(
-                        classIApplicationThread, // caller
-                        String::class.java, // callingPackage
-                        String::class.java, // callingFeatureId
-                        IntentClass, // intent
-                        String::class.java, // resolvedType
-                        IBinderClass, // resultTo
-                        String::class.java, // resultWho
-                        Integer.TYPE, // requestCode
-                        Integer.TYPE, // flags
-                        classProfilerInfo, // ProfilerInfo
-                        BundleClass, // options
-                        Integer.TYPE // userId
-                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        param(
+                            classIApplicationThread, // caller
+                            String::class.java, // callingPackage
+                            String::class.java, // callingFeatureId
+                            IntentClass, // intent
+                            String::class.java, // resolvedType
+                            IBinderClass, // resultTo
+                            String::class.java, // resultWho
+                            Integer.TYPE, // requestCode
+                            Integer.TYPE, // flags
+                            classProfilerInfo, // ProfilerInfo
+                            BundleClass, // options
+                            Integer.TYPE // userId
+                        )
+                    } else {
+                        param(
+                            classIApplicationThread, // caller
+                            String::class.java, // callingPackage
+                            IntentClass, // intent
+                            String::class.java, // resolvedType
+                            IBinderClass, // resultTo
+                            String::class.java, // resultWho
+                            Integer.TYPE, // requestCode
+                            Integer.TYPE, // flags
+                            classProfilerInfo, // ProfilerInfo
+                            BundleClass, // options
+                            Integer.TYPE // userId
+                        )
+                    }
                 }
                 beforeHook {
                     this.beforeHookCommon()
@@ -252,20 +263,36 @@ object SystemServerHooker: YukiBaseHooker() {
             injectMember {
                 method {
                     name = "startActivityWithConfig"
-                    param(
-                        classIApplicationThread, // caller
-                        String::class.java, // callingPackage
-                        String::class.java, // callingFeatureId
-                        IntentClass, // intent
-                        String::class.java, // resolvedType
-                        IBinderClass, // resultTo
-                        String::class.java, // resultWho
-                        Integer.TYPE, // requestCode
-                        Integer.TYPE, // startFlags
-                        ConfigurationClass, // newConfig
-                        BundleClass, // options
-                        Integer.TYPE // userId
-                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        param(
+                            classIApplicationThread, // caller
+                            String::class.java, // callingPackage
+                            String::class.java, // callingFeatureId
+                            IntentClass, // intent
+                            String::class.java, // resolvedType
+                            IBinderClass, // resultTo
+                            String::class.java, // resultWho
+                            Integer.TYPE, // requestCode
+                            Integer.TYPE, // startFlags
+                            ConfigurationClass, // newConfig
+                            BundleClass, // options
+                            Integer.TYPE // userId
+                        )
+                    } else {
+                        param(
+                            classIApplicationThread, // caller
+                            String::class.java, // callingPackage
+                            IntentClass, // intent
+                            String::class.java, // resolvedType
+                            IBinderClass, // resultTo
+                            String::class.java, // resultWho
+                            Integer.TYPE, // requestCode
+                            Integer.TYPE, // startFlags
+                            ConfigurationClass, // newConfig
+                            BundleClass, // options
+                            Integer.TYPE // userId
+                        )
+                    }
                 }
                 beforeHook {
                     this.beforeHookCommon()
