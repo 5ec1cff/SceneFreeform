@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="20dp"
+    android:orientation="vertical">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/module_status"
+        style="@style/Widget.Material3.CardView.Outlined"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardBackgroundColor="?colorPrimary"
+        app:cardElevation="@dimen/home_primary_elevation"
+        app:cardPreventCornerOverlap="false"
+        tools:targetApi="p">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
+
+            <ImageView
+                android:id="@+id/module_status_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:srcCompat="@drawable/ic_check_circle"
+                tools:ignore="ContentDescription"
+                app:tint="?colorOnPrimary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/module_status_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                app:layout_constraintStart_toEndOf="@id/module_status_icon"
+                app:layout_constraintTop_toTopOf="parent"
+                android:textAppearance="@style/TextAppearance.AppCompat.Title"
+                android:textColor="?colorOnPrimary"
+                android:text="@string/module_activated" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/module_status_summary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toStartOf="@id/module_status_title"
+                app:layout_constraintTop_toBottomOf="@id/module_status_title"
+                android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                android:text="@string/app_name"
+                android:textColor="?colorOnPrimary" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/system_status"
+        style="@style/Widget.Material3.CardView.Elevated"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="?colorSecondary"
+        app:cardElevation="@dimen/home_primary_elevation"
+        app:cardPreventCornerOverlap="false"
+        tools:targetApi="p">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
+
+            <ImageView
+                android:id="@+id/system_status_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:srcCompat="@drawable/ic_updating"
+                tools:ignore="ContentDescription"
+                app:tint="?colorOnPrimary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/system_status_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                app:layout_constraintStart_toEndOf="@id/system_status_icon"
+                app:layout_constraintTop_toTopOf="parent"
+                android:textAppearance="@style/TextAppearance.AppCompat.Title"
+                android:textColor="?colorOnPrimary"
+                android:text="@string/system_server" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/system_status_summary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toStartOf="@id/system_status_title"
+                app:layout_constraintTop_toBottomOf="@id/system_status_title"
+                android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                android:text="@string/remote_checking"
+                android:textColor="?colorOnPrimary" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/system_ui_status"
+        style="@style/Widget.Material3.CardView.Elevated"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="?colorTertiary"
+        app:cardElevation="@dimen/home_primary_elevation"
+        app:cardPreventCornerOverlap="false"
+        tools:targetApi="p">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
+
+            <ImageView
+                android:id="@+id/system_ui_status_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:srcCompat="@drawable/ic_updating"
+                tools:ignore="ContentDescription"
+                app:tint="?colorOnPrimary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/system_ui_status_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                app:layout_constraintStart_toEndOf="@id/system_ui_status_icon"
+                app:layout_constraintTop_toTopOf="parent"
+                android:textAppearance="@style/TextAppearance.AppCompat.Title"
+                android:textColor="?colorOnPrimary"
+                android:text="@string/system_ui" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/system_ui_status_summary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toStartOf="@id/system_ui_status_title"
+                app:layout_constraintTop_toBottomOf="@id/system_ui_status_title"
+                android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                android:text="@string/remote_checking"
+                android:textColor="?colorOnPrimary" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

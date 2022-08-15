@@ -1,17 +1,71 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory app:title="@string/basic_header">
-
+    <PreferenceCategory app:title="@string/notification_hook_header"
+        app:key="notification_category">
         <SwitchPreferenceCompat
             app:persistent="false"
-            app:key="@string/notification_hook_key"
+            app:key="notification"
+            app:icon="@drawable/ic_notification"
             app:title="@string/notification_hook_title" />
+        <Preference
+            app:persistent="false"
+            app:key="notification_scope"
+            app:title="@string/notification_hook_scope" />
+    </PreferenceCategory>
 
+    <PreferenceCategory app:title="@string/app_jump_header"
+        app:key="app_jump_category">
         <SwitchPreferenceCompat
             app:persistent="false"
-            app:key="@string/start_activity_hook_key"
-            app:title="@string/start_activity_hook_title" />
+            app:key="app_jump"
+            app:title="@string/app_jump_switch" />
+        <SwitchPreferenceCompat
+            app:persistent="false"
+            app:key="app_jump_share"
+            app:icon="@drawable/ic_share"
+            app:title="@string/share_title" />
+        <SwitchPreferenceCompat
+            app:persistent="false"
+            app:key="app_jump_browser"
+            app:icon="@drawable/ic_browser"
+            app:title="@string/browser_title" />
+        <SwitchPreferenceCompat
+            app:persistent="false"
+            app:key="app_jump_file_selector"
+            app:isPreferenceVisible="false"
+            app:icon="@drawable/ic_file_selector"
+            app:title="@string/file_selector_title" />
+        <SwitchPreferenceCompat
+            app:persistent="false"
+            app:key="app_jump_settings"
+            app:icon="@drawable/ic_settings"
+            app:isPreferenceVisible="false"
+            app:title="@string/app_jump_settings_title" />
+        <SwitchPreferenceCompat
+            app:persistent="false"
+            app:isPreferenceVisible="false"
+            app:key="handle_qq_share"
+            app:title="@string/qq_share_title"
+            app:summary="@string/qq_share_summary" />
+        <SwitchPreferenceCompat
+            app:persistent="false"
+            app:isPreferenceVisible="false"
+            app:key="handle_wechat_share"
+            app:title="@string/wechat_share_title" />
+        <Preference
+            app:persistent="false"
+            app:key="app_jump_scope"
+            app:title="@string/start_activity_hook_scope_title"
+            />
+    </PreferenceCategory>
 
+    <PreferenceCategory app:title="@string/screen_title"
+        app:key="screen_category">
+        <SwitchPreferenceCompat
+            app:persistent="false"
+            app:key="landscape"
+            app:icon="@drawable/ic_landscape"
+            app:title="@string/landscape_title" />
     </PreferenceCategory>
 
 </PreferenceScreen>

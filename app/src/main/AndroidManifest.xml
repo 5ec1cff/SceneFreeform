@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="five.ec1cff.scene_freeform">
 
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -16,21 +19,18 @@
         android:name="com.highcapable.yukihookapi.hook.xposed.application.ModuleApplication"
         tools:targetApi="31">
         <activity
-            android:name=".SettingsActivity"
-            android:exported="true"
-            android:label="@string/title_activity_settings">
+            android:name=".MainActivity"
+            android:launchMode="singleTop"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS" />
+            </intent-filter>
         </activity>
-
-        <!--provider
-            android:name=".ConfigProvider"
-            android:authorities="${configAuthority}"
-            android:enabled="true"
-            android:exported="true"
-            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" /-->
 
         <meta-data
             android:name="xposedmodule"

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/settings_nav"
+    app:startDestination="@id/settings_fragment">
+    <fragment
+        android:id="@+id/settings_fragment"
+        android:name="five.ec1cff.scene_freeform.fragments.SettingsFragment"
+        android:label="settings">
+        <action
+            android:id="@+id/settings_fragment_to_app_selector_fragment"
+            app:destination="@id/app_selector_fragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/app_selector_fragment"
+        android:name="five.ec1cff.scene_freeform.fragments.AppSelectorFragment"
+        android:label="app_selector">
+    </fragment>
+</navigation>
