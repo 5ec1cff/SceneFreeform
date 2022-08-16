@@ -32,7 +32,6 @@
         <SwitchPreferenceCompat
             app:persistent="false"
             app:key="app_jump_file_selector"
-            app:isPreferenceVisible="false"
             app:icon="@drawable/ic_file_selector"
             app:title="@string/file_selector_title" />
         <SwitchPreferenceCompat

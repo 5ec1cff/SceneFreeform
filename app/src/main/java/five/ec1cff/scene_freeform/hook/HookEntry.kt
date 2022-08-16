@@ -1,15 +1,17 @@
 package five.ec1cff.scene_freeform.hook
 
-import android.app.ContextImpl
 import android.content.Context
-import android.system.Os
 import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.log.loggerD
 import com.highcapable.yukihookapi.hook.log.loggerE
-import com.highcapable.yukihookapi.hook.type.android.ContextImplClass
+import com.highcapable.yukihookapi.hook.type.android.*
+import com.highcapable.yukihookapi.hook.type.java.IntType
+import com.highcapable.yukihookapi.hook.type.java.ListClass
+import com.highcapable.yukihookapi.hook.type.java.StringType
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
 import five.ec1cff.scene_freeform.BuildConfig
+import java.lang.Exception
 
 @InjectYukiHookWithXposed(isUsingResourcesHook = false)
 class HookEntry: IYukiHookXposedInit {
@@ -17,6 +19,7 @@ class HookEntry: IYukiHookXposedInit {
     override fun onInit() {
         YukiHookAPI.Configs.apply {
             debugTag = "SceneFreeform"
+            isDebug = BuildConfig.DEBUG
             isEnableModulePrefsCache = false
         }
     }
@@ -44,6 +47,5 @@ class HookEntry: IYukiHookXposedInit {
                 }
             }
         }
-
     }
 }

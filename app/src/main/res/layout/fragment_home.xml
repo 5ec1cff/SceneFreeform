@@ -14,8 +14,7 @@
         android:layout_height="wrap_content"
         app:cardBackgroundColor="?colorPrimary"
         app:cardElevation="@dimen/home_primary_elevation"
-        app:cardPreventCornerOverlap="false"
-        tools:targetApi="p">
+        app:cardPreventCornerOverlap="false">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -64,8 +63,7 @@
         android:layout_marginTop="16dp"
         app:cardBackgroundColor="?colorSecondary"
         app:cardElevation="@dimen/home_primary_elevation"
-        app:cardPreventCornerOverlap="false"
-        tools:targetApi="p">
+        app:cardPreventCornerOverlap="false">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -114,8 +112,7 @@
         android:layout_marginTop="16dp"
         app:cardBackgroundColor="?colorTertiary"
         app:cardElevation="@dimen/home_primary_elevation"
-        app:cardPreventCornerOverlap="false"
-        tools:targetApi="p">
+        app:cardPreventCornerOverlap="false">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"

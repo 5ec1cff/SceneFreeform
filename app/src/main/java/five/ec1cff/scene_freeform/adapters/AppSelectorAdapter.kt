@@ -1,4 +1,4 @@
-package five.ec1cff.scene_freeform.fragments
+package five.ec1cff.scene_freeform.adapters
 
 import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
@@ -7,10 +7,6 @@ import androidx.recyclerview.widget.DiffUtil
 import five.ec1cff.scene_freeform.GlideApp
 import five.ec1cff.scene_freeform.databinding.FragmentAppSelectorBinding
 import five.ec1cff.scene_freeform.viewmodels.AppItem
-import java.text.SimpleDateFormat
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 class AppSelectorAdapter(private val checkedSet: HashSet<String>) : RecyclerView.Adapter<AppSelectorAdapter.ViewHolder>() {
     private var mList = listOf<AppItem>()

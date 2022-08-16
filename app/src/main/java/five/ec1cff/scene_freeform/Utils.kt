@@ -6,6 +6,7 @@ import android.app.TaskInfoHidden
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import de.robv.android.xposed.XposedHelpers
 
 // frameworks/base/core/java/android/app/WindowConfiguration.java
 private const val ACTIVITY_TYPE_HOME = 2
@@ -34,3 +35,10 @@ fun Context.checkPackageExists(name: String): Boolean {
     }
     return true
 }
+
+fun Any?.getField(name: String): Any? = kotlin.runCatching {
+    return@runCatching XposedHelpers.getObjectField(this, name)
+}.getOrNull()
+
+fun Any?.callMethod(name: String, vararg args: Any?): Any? =
+    XposedHelpers.callMethod(this, name, *args)

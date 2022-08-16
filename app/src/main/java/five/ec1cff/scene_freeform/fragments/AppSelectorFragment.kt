@@ -12,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import five.ec1cff.scene_freeform.R
+import five.ec1cff.scene_freeform.adapters.AppSelectorAdapter
 import five.ec1cff.scene_freeform.databinding.FragmentAppSelectorListBinding
 import five.ec1cff.scene_freeform.viewmodels.AppSelectorViewModel
 

@@ -1,14 +1,18 @@
+@file:Suppress("Unchecked_cast", "deprecation")
 package five.ec1cff.scene_freeform.hook
-
 import android.app.ActivityManager
 import android.content.*
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.pm.PackageManagerHidden
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
+import com.highcapable.yukihookapi.hook.factory.field
 import com.highcapable.yukihookapi.hook.factory.normalClass
 import com.highcapable.yukihookapi.hook.log.loggerD
 import com.highcapable.yukihookapi.hook.log.loggerE
@@ -21,10 +25,14 @@ import com.highcapable.yukihookapi.hook.type.android.IntentClass
 import com.highcapable.yukihookapi.hook.type.java.BooleanType
 import com.highcapable.yukihookapi.hook.type.java.IntType
 import com.highcapable.yukihookapi.hook.type.java.StringType
+import de.robv.android.xposed.XposedHelpers
 import five.ec1cff.scene_freeform.*
 import five.ec1cff.scene_freeform.config.Constants
+import java.lang.ref.WeakReference
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import kotlin.collections.HashSet
 
 object SystemServerHooker: YukiBaseHooker() {
     private const val QQ_PACKAGE_NAME = "com.tencent.mobileqq"
@@ -48,7 +56,6 @@ object SystemServerHooker: YukiBaseHooker() {
         Intent.ACTION_SEND,
         Intent.ACTION_SEND_MULTIPLE,
     )
-    // TODO: 文件选择器小窗无法返回内容
     private val FILE_SELECTOR_ACTIONS = listOf(
         Intent.ACTION_GET_CONTENT,
         Intent.ACTION_OPEN_DOCUMENT
@@ -57,13 +64,18 @@ object SystemServerHooker: YukiBaseHooker() {
     private val mBlacklist = mutableSetOf<String>()
     private val executorService by lazy { Executors.newCachedThreadPool() }
     private var isSystemStarted = false
+    private val mResultTargetActivities = WeakHashMap<IBinder, Boolean>()
+    /**
+     *  ActivityRecord -> ActivityRecord.resultTo
+     */
+    private val mResultSourceActivities = WeakHashMap<Any, WeakReference<Any>>()
 
     /**
      * 记录被认为是小窗模式的 App
      */
     private val mFreeformPackages = ConcurrentHashMap<String, Long>()
 
-    private val TARGET_COMPONENT_BLACKLIST = listOf(
+    private val RESOLVER_COMPONENTS = listOf(
         ComponentName("android", "com.android.internal.app.ChooserActivity"),
         ComponentName("android", "com.android.internal.app.ResolverActivity"),
     )
@@ -76,6 +88,8 @@ object SystemServerHooker: YukiBaseHooker() {
     private val WECHAT_SHARE_SDK_COMPONENTS = listOf(
         ComponentName("com.tencent.mm", "com.tencent.mm.plugin.base.stub.WXEntryActivity"), // Share activity of Wechat
     )
+
+    private fun needFixResult() = mFileSelectorEnabled || mQQShareEnabled
 
     private fun checkFreeformPackages(packageName: String?): Boolean {
         packageName ?: return false
@@ -122,7 +136,7 @@ object SystemServerHooker: YukiBaseHooker() {
         return result
     }
 
-    private fun shouldInject(intent: Intent, callingPackage: String?): Boolean {
+    private fun shouldInject(intent: Intent, callingPackage: String?, userId: Int, resultTo: IBinder? = null): Boolean {
         if (intent.action == Intent.ACTION_MAIN) {
             return false
         }
@@ -133,7 +147,18 @@ object SystemServerHooker: YukiBaseHooker() {
         if (intent.component == null) {
             if (mQQShareEnabled && callingPackage != QQ_PACKAGE_NAME && checkQQShareSDK(intent)) {
                 result = true
+                addFreeformPackage(QQ_PACKAGE_NAME)
+                if (resultTo != null) fixResultForActivity(resultTo, false)
                 reason = "QQShare"
+            } else if (mFileSelectorEnabled && intent.action in FILE_SELECTOR_ACTIONS) {
+                val pm = mContext.packageManager as PackageManagerHidden
+                val component = pm.resolveActivityAsUser(intent, 0, userId).activityInfo
+                    .let { ComponentName(it.packageName, it.name) }
+                if (component !in RESOLVER_COMPONENTS) {
+                    if (resultTo != null) fixResultForActivity(resultTo)
+                    reason = "fileSelectorSingle"
+                    result = true
+                }
             }
         } else if (packageName != null) {
             val isInFreeformPackages = checkFreeformPackages(packageName)
@@ -151,8 +176,8 @@ object SystemServerHooker: YukiBaseHooker() {
                 } else if (packageName in mBlacklist) {
                     reason = "packageInUserBlackList"
                     false
-                } else if (intent.component in TARGET_COMPONENT_BLACKLIST) {
-                    reason = "componentInBlacklist"
+                } else if (intent.component in RESOLVER_COMPONENTS) {
+                    reason = "componentIsResolver"
                     false
                 } else if (!checkCurrentTask(packageName, callingPackage)) {
                     reason = "currentTask"
@@ -168,6 +193,7 @@ object SystemServerHooker: YukiBaseHooker() {
                     true
                 } else if (mFileSelectorEnabled && intent.action in FILE_SELECTOR_ACTIONS) {
                     reason = "fileSelector"
+                    if (resultTo != null) fixResultForActivity(resultTo)
                     true
                 } else if (mWeChatShareEnabled && intent.component in WECHAT_SHARE_SDK_COMPONENTS) {
                     reason = "wechatShare"
@@ -185,15 +211,16 @@ object SystemServerHooker: YukiBaseHooker() {
         return result
     }
 
-    private fun checkCaller(packageName: String?): Boolean {
+    private fun checkCaller(packageName: String?, user: Int): Boolean {
         kotlin.runCatching {
             if (packageName == null) return false
             val callingUid = Binder.getCallingUid()
             if (callingUid == 0 || callingUid == 1000 || callingUid == 2000) return true
             // may cause NameNotFoundException
             // i.e. `PackageManagerServiceInjector.verifyInstallFromShell` with packageName == "pm"
-            if (mContext.packageManager.getPackageUid(packageName, 0) != callingUid % 100000) {
-                loggerW(msg = "caller package $packageName does not match $callingUid")
+            val pm = mContext.packageManager as PackageManagerHidden
+            if (pm.getPackageUidAsUser(packageName, user) != callingUid) {
+                loggerW(msg = "caller package $packageName does not match $callingUid (in user $user)")
                 return false
             }
             return true
@@ -201,14 +228,8 @@ object SystemServerHooker: YukiBaseHooker() {
         return false
     }
 
-    private fun checkQQShareSDK(intent: Intent): Boolean {
-        // 会导致 SDK 反馈为分享取消
-        if (intent.action == Intent.ACTION_VIEW && intent.scheme == "mqqapi" && intent.data?.authority == "share") {
-            addFreeformPackage(QQ_PACKAGE_NAME)
-            return true
-        }
-        return false
-    }
+    private fun checkQQShareSDK(intent: Intent): Boolean =
+        intent.action == Intent.ACTION_VIEW && intent.scheme == "mqqapi" && intent.data?.authority == "share"
 
     private fun checkUri(intent: Intent): Boolean {
         if (intent.action == Intent.ACTION_VIEW) {
@@ -219,17 +240,28 @@ object SystemServerHooker: YukiBaseHooker() {
         return false
     }
 
+    private fun fixResultForActivity(resultTo: IBinder, needRedirectResult: Boolean = true) {
+        synchronized(mResultTargetActivities) {
+            mResultTargetActivities[resultTo] = needRedirectResult
+            loggerD(msg = "bypass for ${System.identityHashCode(resultTo)}")
+        }
+    }
+
     private fun HookParam.beforeHookCommon(
         intentIndex: Int = 3,
         optionsIndex: Int = 10,
         shouldCheckCaller: Boolean = true,
-        callingPackageIndex: Int = 1
+        callingPackageIndex: Int = 1,
+        userIdIndex: Int = 11,
+        resultToIndex: Int = 5
     ) {
         if (!mEnabled) return
         val callingPackage = args[callingPackageIndex] as? String?
-        if (shouldCheckCaller && !checkCaller(callingPackage)) return
+        val userId = args[userIdIndex] as? Int ?: return
+        val resultTo = args[resultToIndex] as? IBinder?
+        if (shouldCheckCaller && !checkCaller(callingPackage, userId)) return
         val intent = args[intentIndex] as? Intent ?: return
-        if (!shouldInject(intent, callingPackage)) return
+        if (!shouldInject(intent, callingPackage, userId, resultTo)) return
         intent.flags = intent.flags or Intent.FLAG_ACTIVITY_NEW_TASK
         args(optionsIndex).set(injectFreeFormOptions(args[optionsIndex] as? Bundle?))
     }
@@ -317,6 +349,7 @@ object SystemServerHooker: YukiBaseHooker() {
         loggerD(msg = "mEnabled=$mEnabled, mBlacklist=$mBlacklist")
         val classIApplicationThread = findClass("android.app.IApplicationThread").normalClass!!
         val classProfilerInfo = findClass("android.app.ProfilerInfo").normalClass!!
+        // TODO: hook ActivityStarter
         "com.android.server.wm.ActivityTaskManagerService".hook {
             injectMember {
                 method {
@@ -324,24 +357,24 @@ object SystemServerHooker: YukiBaseHooker() {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         param(
                             classIApplicationThread, // caller
-                            StringType, // callingPackage
+                            StringType, // callingPackage 1
                             StringType, // callingFeatureId
-                            IntentClass, // intent
+                            IntentClass, // intent 3
                             StringType, // resolvedType
-                            IBinderClass, // resultTo
+                            IBinderClass, // resultTo 5
                             StringType, // resultWho
                             IntType, // requestCode
                             IntType, // startFlags
                             classProfilerInfo, // ProfilerInfo
                             BundleClass, // bOptions
-                            IntType, // userId
+                            IntType, // userId 11
                             BooleanType // validateIncomingUser
                         )
                     } else {
                         param(
                             classIApplicationThread, // caller
-                            StringType, // callingPackage
-                            IntentClass, // intent
+                            StringType, // callingPackage 1
+                            IntentClass, // intent 2
                             StringType, // resolvedType
                             IBinderClass, // resultTo
                             StringType, // resultWho
@@ -364,9 +397,9 @@ object SystemServerHooker: YukiBaseHooker() {
                     param(
                         classIApplicationThread, // caller
                         StringType, // callingPackage
-                        IntentClass, // intent
+                        IntentClass, // intent 2
                         StringType, // resolvedType
-                        IBinderClass, // resultTo
+                        IBinderClass, // resultTo 4
                         StringType, // resultWho
                         IntType, // requestCode
                         IntType, // flags
@@ -374,11 +407,11 @@ object SystemServerHooker: YukiBaseHooker() {
                         BundleClass, // options
                         IBinderClass, // permissionToken
                         BooleanType, // ignoreTargetSecurity
-                        IntType // userId
+                        IntType // userId 12
                     )
                 }
                 beforeHook {
-                    this.beforeHookCommon(intentIndex = 2, optionsIndex = 9, shouldCheckCaller = false)
+                    this.beforeHookCommon(intentIndex = 2, optionsIndex = 9, shouldCheckCaller = false, userIdIndex = 12, resultToIndex = 4)
                 }
             }
             injectMember {
@@ -387,17 +420,17 @@ object SystemServerHooker: YukiBaseHooker() {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         param(
                             classIApplicationThread, // caller
-                            StringType, // callingPackage
+                            StringType, // callingPackage 1
                             StringType, // callingFeatureId
-                            IntentClass, // intent
+                            IntentClass, // intent 3
                             StringType, // resolvedType
-                            IBinderClass, // resultTo
+                            IBinderClass, // resultTo 5
                             StringType, // resultWho
                             IntType, // requestCode
                             IntType, // flags
                             classProfilerInfo, // ProfilerInfo
                             BundleClass, // options
-                            IntType // userId
+                            IntType // userId 11
                         )
                     } else {
                         param(
@@ -425,17 +458,17 @@ object SystemServerHooker: YukiBaseHooker() {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         param(
                             classIApplicationThread, // caller
-                            StringType, // callingPackage
+                            StringType, // callingPackage 1
                             StringType, // callingFeatureId
-                            IntentClass, // intent
+                            IntentClass, // intent 3
                             StringType, // resolvedType
-                            IBinderClass, // resultTo
+                            IBinderClass, // resultTo 5
                             StringType, // resultWho
                             IntType, // requestCode
                             IntType, // startFlags
                             ConfigurationClass, // newConfig
                             BundleClass, // options
-                            IntType // userId
+                            IntType // userId 11
                         )
                     } else {
                         param(
@@ -455,6 +488,81 @@ object SystemServerHooker: YukiBaseHooker() {
                 }
                 beforeHook {
                     this.beforeHookCommon()
+                }
+            }
+        }
+        // API >= 30
+        "com.android.server.wm.ActivityStarter".hook {
+            injectMember {
+                method {
+                    name = "sendNewTaskResultRequestIfNeeded"
+                    emptyParam()
+                }
+                beforeHook {
+                    if (!needFixResult()) return@beforeHook
+                    val resultTo = instance.getField("mRequest")?.getField("resultTo") ?: return@beforeHook
+                    synchronized(mResultTargetActivities) {
+                        if (resultTo in mResultTargetActivities) {
+                            loggerD(msg = "Bypass NEW_TASK intent result restriction for ${System.identityHashCode(resultTo)}")
+                            resultNull()
+                        }
+                    }
+                }
+            }
+            injectMember {
+                method {
+                    name = "computeTargetTask"
+                    emptyParam()
+                }
+                beforeHook {
+                    if (!needFixResult()) return@beforeHook
+                    val resultTo = instance.getField("mRequest")?.getField("resultTo") ?: return@beforeHook
+                    synchronized(mResultTargetActivities) {
+                        val needRedirectResult = mResultTargetActivities[resultTo] ?: return@beforeHook
+                        loggerD(msg = "Force new task for ${System.identityHashCode(resultTo)}")
+                        resultNull()
+                        mResultTargetActivities.remove(resultTo)
+                        if (needRedirectResult) {
+                            val record = instance.getField("mStartActivity") ?: return@beforeHook
+                            val resultToRecord = record.getField("resultTo") ?: return@beforeHook
+                            mResultSourceActivities[record] = WeakReference(resultToRecord)
+                        }
+                    }
+                }
+            }
+        }
+        val ACTIVITY_RESUMED = findClass("com.android.server.wm.ActivityStack\$ActivityState")
+            .normalClass!!.field { name = "RESUMED" }.get().self
+        "com.android.server.wm.ActivityRecord".hook {
+            injectMember {
+                method {
+                    name = "finishActivityResults"
+                }
+                beforeHook {
+                    if (!needFixResult()) return@beforeHook
+                    val fromRecord = instance
+                    val toRecord = mResultSourceActivities[fromRecord]?.get()
+                    if (toRecord != null && toRecord.callMethod("isState", ACTIVITY_RESUMED) == true) {
+                        resultNull()
+                        val activityInfo = fromRecord.getField("info") as? ActivityInfo?
+                        val callingUid = activityInfo?.applicationInfo?.uid ?: 1000 /* callingUid */
+                        val resultWho = fromRecord.getField("resultWho") /* resultWho */
+                        val requestCode = fromRecord.getField("requestCode") /* requestCode */
+                        val resultCode = args[0] /* resultCode */
+                        val data = args[1] /* data */
+                        val dataGrants = args[2] /* dataGrants */
+                        loggerD(msg = "callingUid=$callingUid,resultWho=$resultWho,requestCode=$requestCode,resultCode=$resultCode,data=$data,dataGrants=$dataGrants")
+                        toRecord.callMethod(
+                            "sendResult",
+                            callingUid,
+                            resultWho,
+                            requestCode,
+                            resultCode,
+                            data,
+                            dataGrants
+                        )
+                    }
+                    mResultSourceActivities.remove(fromRecord)
                 }
             }
         }
