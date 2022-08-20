@@ -6,13 +6,11 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.google.android.material.color.MaterialColors
 import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.hook.log.loggerD
 import five.ec1cff.scene_freeform.R
 import five.ec1cff.scene_freeform.databinding.FragmentHomeBinding
 import five.ec1cff.scene_freeform.viewmodels.ModuleStatusViewModel
@@ -51,6 +49,8 @@ class HomeFragment: Fragment() {
         if (!activated) {
             binding.systemStatus.visibility = View.GONE
             binding.systemUiStatus.visibility = View.GONE
+            viewModel.systemServerStatus.value = RemoteStatus(RemoteStatus.Status.TIMEOUT)
+            viewModel.systemUIStatus.value = RemoteStatus(RemoteStatus.Status.TIMEOUT)
             return
         }
         viewModel.checkRemoteStatus(requireActivity(), handler)

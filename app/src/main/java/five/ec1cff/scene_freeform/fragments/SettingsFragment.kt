@@ -65,7 +65,7 @@ class SettingsFragment : PreferenceFragmentCompat(), Preference.OnPreferenceChan
         val systemUiAvailable = viewModel.systemUIStatus.value?.status == RemoteStatus.Status.INJECTED
         findPreference<PreferenceCategory>("notification_category")!!.isEnabled = moduleAvailable && systemUiAvailable
         findPreference<PreferenceCategory>("app_jump_category")!!.isEnabled = moduleAvailable && systemServerAvailable
-        findPreference<PreferenceCategory>("screen_category")!!.isEnabled = moduleAvailable
+        findPreference<PreferenceCategory>("screen_category")!!.isEnabled = moduleAvailable && (systemUiAvailable || systemServerAvailable)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

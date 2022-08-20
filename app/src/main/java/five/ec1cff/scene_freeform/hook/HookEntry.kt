@@ -1,7 +1,10 @@
 package five.ec1cff.scene_freeform.hook
 
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import com.highcapable.yukihookapi.YukiHookAPI
+import com.highcapable.yukihookapi.annotation.YukiGenerateApi
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.log.loggerD
 import com.highcapable.yukihookapi.hook.log.loggerE
@@ -9,11 +12,12 @@ import com.highcapable.yukihookapi.hook.type.android.*
 import com.highcapable.yukihookapi.hook.type.java.IntType
 import com.highcapable.yukihookapi.hook.type.java.ListClass
 import com.highcapable.yukihookapi.hook.type.java.StringType
+import com.highcapable.yukihookapi.hook.xposed.bridge.YukiHookBridge
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
 import five.ec1cff.scene_freeform.BuildConfig
 import java.lang.Exception
 
-@InjectYukiHookWithXposed(isUsingResourcesHook = false)
+@InjectYukiHookWithXposed(isUsingResourcesHook = false, modulePackageName = BuildConfig.APPLICATION_ID)
 class HookEntry: IYukiHookXposedInit {
 
     override fun onInit() {
@@ -24,6 +28,7 @@ class HookEntry: IYukiHookXposedInit {
         }
     }
 
+    @OptIn(YukiGenerateApi::class)
     override fun onHook() = YukiHookAPI.encase {
         loadApp("com.android.systemui") {
             YukiHookAPI.Configs.debugTag = "SceneFreeform:systemui"
@@ -32,8 +37,23 @@ class HookEntry: IYukiHookXposedInit {
         loadSystem {
             YukiHookAPI.Configs.debugTag = "SceneFreeform:system"
             loadHooker(SystemServerHooker)
+            ContextImplClass.hook {
+                injectMember {
+                    method {
+                        name = "sendBroadcast"
+                        param(IntentClass)
+                    }
+                    beforeHook {
+                        val intent = args[0] as? Intent
+                        if (intent?.action?.startsWith("yukihookapi.intent.action") == true)
+                            loggerD(msg = "server sent broadcast ${intent.action}")
+                    }
+                }
+            }
         }
         loadApp(BuildConfig.APPLICATION_ID) {
+            // temporary fix for YukiHook
+            YukiHookBridge.hookModuleAppStatus(appClassLoader, false)
             ContextImplClass.hook {
                 injectMember {
                     method {
