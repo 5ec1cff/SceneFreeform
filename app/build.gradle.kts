@@ -3,31 +3,28 @@ import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    id("kotlin-android")
     id("kotlin-kapt")
     id("com.google.devtools.ksp") version "1.7.10-1.0.6"
     id("dev.rikka.tools.refine") version "3.1.1"
 }
 
-// Create a variable called keystorePropertiesFile, and initialize it to your
-// keystore.properties file, in the rootProject folder.
 val keystorePropertiesFile = rootProject.file("keystore.properties")
-
-// Initialize a new Properties() object called keystoreProperties.
-val keystoreProperties = Properties()
-
-// Load your keystore.properties file into the keystoreProperties object.
-if (keystorePropertiesFile.exists() && keystorePropertiesFile.isFile) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-}
+val keystoreProperties = if (keystorePropertiesFile.exists() && keystorePropertiesFile.isFile) {
+    Properties().apply {
+        load(FileInputStream(keystorePropertiesFile))
+    }
+} else null
 
 android {
-    signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
+    if (keystoreProperties != null) {
+        signingConfigs {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
     }
 
@@ -53,7 +50,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs["release"]
+            if (keystoreProperties != null) {
+                signingConfig = signingConfigs["release"]
+            }
         }
     }
     compileOptions {
