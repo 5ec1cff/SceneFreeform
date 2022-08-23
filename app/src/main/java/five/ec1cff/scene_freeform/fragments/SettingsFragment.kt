@@ -2,6 +2,7 @@ package five.ec1cff.scene_freeform.fragments
 
 import android.os.Bundle
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.bundleOf
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -12,7 +13,6 @@ import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreferenceCompat
 import com.highcapable.yukihookapi.YukiHookAPI
 import five.ec1cff.scene_freeform.R
-import five.ec1cff.scene_freeform.checkPackageExists
 import five.ec1cff.scene_freeform.checkPackageExistsAsync
 import five.ec1cff.scene_freeform.config.*
 import five.ec1cff.scene_freeform.viewmodels.ModuleStatusViewModel
@@ -62,6 +62,14 @@ class SettingsFragment : PreferenceFragmentCompat(), Preference.OnPreferenceChan
         findPreference<PreferenceCategory>("screen_category")!!.isEnabled = moduleAvailable && (systemUiAvailable || systemServerAvailable)
     }
 
+    override fun onResume() {
+        super.onResume()
+        (requireActivity() as AppCompatActivity).supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(false)
+            title = getString(R.string.settings_menu_title)
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.systemServerStatus.observe(viewLifecycleOwner) {
@@ -86,16 +94,16 @@ class SettingsFragment : PreferenceFragmentCompat(), Preference.OnPreferenceChan
                 .distinctUntilChanged()
                 .onEach { count ->
                     findPreference<Preference>(Constants.NOTIFICATION_SCOPE)?.also {
-                        it.summary = if (count > 0) getString(R.string.scope_summary, count)
-                        else getString(R.string.scope_summary_empty)
+                        it.title = if (count > 0) getString(R.string.notification_scope_title, count)
+                        else getString(R.string.notification_scope_title_empty)
                     }
                 }.launchIn(viewLifecycleOwner.lifecycleScope)
             getAppJumpRulesCountFlow()
                 .distinctUntilChanged()
                 .onEach { count ->
                     findPreference<Preference>(Constants.APP_JUMP_SCOPE)?.also {
-                        it.summary = if (count > 0) getString(R.string.scope_summary, count)
-                        else getString(R.string.scope_summary_empty)
+                        it.title = if (count > 0) getString(R.string.start_activity_scope_title, count)
+                        else getString(R.string.start_activity_scope_title_empty)
                     }
                 }.launchIn(viewLifecycleOwner.lifecycleScope)
         }
@@ -105,9 +113,9 @@ class SettingsFragment : PreferenceFragmentCompat(), Preference.OnPreferenceChan
         setPreferencesFromResource(R.xml.root_preferences, rootKey)
         val activity = requireActivity()
         lifecycleScope.launch {
-            findPreference<SwitchPreferenceCompat>("handle_qq_share")?.isVisible =
+            findPreference<SwitchPreferenceCompat>(Constants.HANDLE_QQ_SHARE)?.isVisible =
                 activity.checkPackageExistsAsync(Constants.QQ_PACKAGE_NAME)
-            findPreference<SwitchPreferenceCompat>("handle_wechat_share")?.isVisible =
+            findPreference<SwitchPreferenceCompat>(Constants.HANDLE_WECHAT_SHARE)?.isVisible =
                 activity.checkPackageExistsAsync(Constants.WECHAT_PACKAGE_NAME)
         }
         findPreference<Preference>(Constants.NOTIFICATION_SCOPE)!!.setOnPreferenceClickListener {

@@ -2,6 +2,7 @@ package five.ec1cff.scene_freeform.fragments
 
 import android.os.Bundle
 import android.view.*
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
@@ -9,9 +10,12 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.highcapable.yukihookapi.hook.log.loggerD
 import five.ec1cff.scene_freeform.R
 import five.ec1cff.scene_freeform.adapters.AppSelectorAdapter
+import five.ec1cff.scene_freeform.config.Constants
 import five.ec1cff.scene_freeform.databinding.FragmentAppSelectorListBinding
+import five.ec1cff.scene_freeform.viewmodels.AppItem
 import five.ec1cff.scene_freeform.viewmodels.AppSelectorViewModel
 
 class AppSelectorFragment : Fragment(), MenuProvider, AppSelectorAdapter.OnCheckedChangedListener {
@@ -37,15 +41,16 @@ class AppSelectorFragment : Fragment(), MenuProvider, AppSelectorAdapter.OnCheck
     }
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-        if (menuItem.itemId == R.id.save_app_list) {
-            val key = arguments?.getString(KEY_TYPE) ?: return true
+        if (menuItem.itemId == android.R.id.home) {
             findNavController().navigateUp()
         }
         return true
     }
 
-    override fun onCheckedChanged(name: String, checked: Boolean) {
-        viewModel.setPackageChecked(name, checked)
+    override fun onCheckedChanged(item: AppItem, checked: Boolean) {
+        item.isChecked = checked
+        loggerD(msg = "onCheckChanged($checked): $item")
+        viewModel.setPackageChecked(item.packageName, checked)
     }
 
     @Suppress("Unchecked_Cast")
@@ -53,15 +58,25 @@ class AppSelectorFragment : Fragment(), MenuProvider, AppSelectorAdapter.OnCheck
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        val type = requireArguments().getString(KEY_TYPE)!!
         binding = FragmentAppSelectorListBinding.inflate(inflater, container, false)
-        requireActivity().addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
+        requireActivity().apply {
+            addMenuProvider(this@AppSelectorFragment, viewLifecycleOwner, Lifecycle.State.RESUMED)
+            this as AppCompatActivity
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            supportActionBar?.title = when (type) {
+                Constants.APP_JUMP_SCOPE -> getString(R.string.start_activity_scope_title_empty)
+                Constants.NOTIFICATION_SCOPE -> getString(R.string.notification_scope_title_empty)
+                else -> ""
+            }
+        }
         val myAdapter = AppSelectorAdapter(this)
         viewModel.filteredAppList.observe(viewLifecycleOwner) {
             myAdapter.update(it)
             binding.refresh.isRefreshing = false
         }
         if (viewModel.filteredAppList.value == null) {
-            viewModel.setType(requireArguments().getString(KEY_TYPE)!!)
+            viewModel.setType(type)
             refresh()
         }
         binding.refresh.setOnRefreshListener {

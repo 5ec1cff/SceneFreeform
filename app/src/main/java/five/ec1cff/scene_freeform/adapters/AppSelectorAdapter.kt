@@ -12,18 +12,19 @@ class AppSelectorAdapter(private val listener: OnCheckedChangedListener) : Recyc
     private var mList = listOf<AppItem>()
 
     interface OnCheckedChangedListener {
-        fun onCheckedChanged(name: String, checked: Boolean)
+        fun onCheckedChanged(item: AppItem, checked: Boolean)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-
-        return ViewHolder(
-            FragmentAppSelectorBinding.inflate(
-                LayoutInflater.from(parent.context),
-                parent,
-                false
-            )
+        val binding = FragmentAppSelectorBinding.inflate(
+            LayoutInflater.from(parent.context),
+            parent,
+            false
         )
+        binding.itemCheckbox.setOnCheckedChangeListener { v, b ->
+            (v.tag as? AppItem)?.let { listener.onCheckedChanged(it, b) }
+        }
+        return ViewHolder(binding)
 
     }
 
@@ -50,10 +51,9 @@ class AppSelectorAdapter(private val listener: OnCheckedChangedListener) : Recyc
         val packageName = item.packageName
         binding.appName.text = item.label
         binding.appDesc.text = packageName
+        binding.itemCheckbox.tag = null
         binding.itemCheckbox.isChecked = item.isChecked
-        binding.itemCheckbox.setOnCheckedChangeListener { _, b ->
-            listener.onCheckedChanged(packageName, b)
-        }
+        binding.itemCheckbox.tag = item
         GlideApp.with(binding.appIcon)
             .load(item.packageInfo)
             .into(binding.appIcon)
@@ -67,7 +67,6 @@ class AppSelectorAdapter(private val listener: OnCheckedChangedListener) : Recyc
                 binding.itemRoot.setOnClickListener {
                     binding.itemCheckbox.toggle()
                 }
-                binding.itemCheckbox.setOnCheckedChangeListener { compoundButton, b ->  }
             }
     }
 

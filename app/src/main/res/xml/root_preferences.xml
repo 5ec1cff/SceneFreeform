@@ -10,7 +10,8 @@
         <Preference
             app:persistent="false"
             app:key="notification_scope"
-            app:title="@string/notification_hook_scope" />
+            app:title="@string/notification_scope_title_empty"
+            app:summary="@string/notification_scope_title_summary"/>
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/app_jump_header"
@@ -54,7 +55,8 @@
         <Preference
             app:persistent="false"
             app:key="app_jump_scope"
-            app:title="@string/start_activity_hook_scope_title"
+            app:title="@string/start_activity_scope_title_empty"
+            app:summary="@string/start_activity_scope_title_summary"
             />
     </PreferenceCategory>
 

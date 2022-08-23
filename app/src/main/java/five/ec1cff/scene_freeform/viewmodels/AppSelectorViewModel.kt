@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.highcapable.yukihookapi.hook.log.loggerE
+import com.highcapable.yukihookapi.hook.xposed.application.ModuleApplication
 import five.ec1cff.scene_freeform.config.AppJumpRule
 import five.ec1cff.scene_freeform.config.ConfigProvider
 import five.ec1cff.scene_freeform.config.Constants
@@ -20,9 +21,12 @@ import java.util.*
 data class AppItem(
     val packageInfo: PackageInfo,
     val packageName: String,
-    val label: String,
     var isChecked: Boolean
-)
+) {
+    val label by lazy {
+        packageInfo.applicationInfo.loadLabel(ModuleApplication.appContext.packageManager).toString()
+    }
+}
 
 private interface Adapter {
     suspend fun addPackage(name: String)
@@ -131,7 +135,7 @@ class AppSelectorViewModel(application: Application) : AndroidViewModel(applicat
             }
             appList = getApplication<Application>().getInstalledPackagesAsync(0).map {
                 // TODO: load label with cache
-                AppItem(it, it.packageName, it.packageName, it.packageName in checkedList)
+                AppItem(it, it.packageName, it.packageName in checkedList)
             }
             mFilter.filter(mQuery)
         }

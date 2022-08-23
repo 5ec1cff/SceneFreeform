@@ -25,7 +25,7 @@ class HookEntry: IYukiHookXposedInit {
     override fun onInit() {
         YukiHookAPI.Configs.apply {
             debugTag = "SceneFreeform"
-            isDebug = false // BuildConfig.DEBUG
+            isDebug = BuildConfig.DEBUG
             isEnableModulePrefsCache = false
         }
     }

@@ -29,7 +29,7 @@ abstract class ConfigDB : RoomDatabase() {
         @Query("SELECT * FROM NotificationScope")
         suspend fun getNotificationScopes(): List<NotificationScope>
 
-        @Query("SELECT COUNT(*) FROM NotificationScope")
+        @Query("SELECT COUNT(*) FROM NotificationScope WHERE inWhitelist = \"1\"")
         fun getNotificationScopesCountFlow(): Flow<Int>
 
         @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -38,7 +38,7 @@ abstract class ConfigDB : RoomDatabase() {
         @Query("SELECT * FROM AppJumpRule")
         suspend fun getAppJumpRules(): List<AppJumpRule>
 
-        @Query("SELECT COUNT(*) FROM AppJumpRule")
+        @Query("SELECT COUNT(*) FROM AppJumpRule WHERE allowTarget = \"0\"")
         fun getAppJumpRulesCountFlow(): Flow<Int>
     }
 }

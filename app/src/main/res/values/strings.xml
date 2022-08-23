@@ -7,7 +7,7 @@
     <string name="app_jump_header">应用间跳转</string>
     <string name="share_title">分享内容到其他应用</string>
     <string name="qq_share_title">处理 QQ 分享 SDK</string>
-    <string name="qq_share_summary">注意：当前启用该功能可能会导致 QQ 分享 SDK 向源 App 返回分享失败，请谨慎开启（系统分享不受影响）。</string>
+    <string name="qq_share_summary">可能无效</string>
     <string name="wechat_share_title">处理微信分享 SDK</string>
     <string name="browser_title">启动浏览器</string>
     <string name="file_selector_title">调用文件选择器</string>
@@ -23,11 +23,13 @@
     <string name="remote_version_mismatch">版本不匹配 (%1$s)</string>
     <string name="remote_checking">检测中</string>
     <string name="remote_not_injected">不可用</string>
-    <string name="notification_hook_scope">选择要作用到的应用</string>
-    <string name="start_activity_hook_scope_title">选择要排除的应用</string>
     <string name="screen_title">屏幕</string>
     <string name="landscape_title">横屏时使用小窗</string>
     <string name="app_jump_switch">总开关</string>
-    <string name="scope_summary_empty">没有选择应用</string>
-    <string name="scope_summary">已选择 %1$d 个应用</string>
+    <string name="notification_scope_title_empty">选择要作用到的应用</string>
+    <string name="start_activity_scope_title_empty">选择要排除的应用</string>
+    <string name="notification_scope_title">已选择 %1$d 个应用</string>
+    <string name="start_activity_scope_title">已排除 %1$d 个应用</string>
+    <string name="notification_scope_title_summary">点击通知后总是以小窗启动</string>
+    <string name="start_activity_scope_title_summary">不使用以上应用间跳转的规则的应用</string>
 </resources>
