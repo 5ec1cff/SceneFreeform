@@ -5,13 +5,12 @@ import com.highcapable.yukihookapi.hook.xposed.channel.data.ChannelData
 import five.ec1cff.scene_freeform.BuildConfig
 
 object Constants {
-    const val SYSTEM_SERVER_PACKAGE = "android"
+    const val SYSTEM_PACKAGE = "android"
     const val SYSTEM_UI_PACKAGE = "com.android.systemui"
-    val CHANNEL_DATA_GET_VERSION_SS = ChannelData<String?>("get_version_$SYSTEM_SERVER_PACKAGE", null)
-    val CHANNEL_DATA_GET_VERSION_SU = ChannelData<String?>("get_version_$SYSTEM_UI_PACKAGE", null)
-    val CHANNEL_DATA_UPDATE_CONFIG = ChannelData<Bundle>("update_config")
-    const val ACTION_ADD_FREEFORM_PACKAGE = "${BuildConfig.APPLICATION_ID}.ADD_FREEFORM_PACKAGE"
-    const val EXTRA_PACKAGE = "extra_package"
+
+    const val QQ_PACKAGE_NAME = "com.tencent.mobileqq"
+    const val WECHAT_PACKAGE_NAME = "com.tencent.mm"
+    const val FOO_VIEW_PACKAGE_NAME = "com.fooview.android.fooview"
 
     const val NOTIFICATION = "notification"
     const val NOTIFICATION_SCOPE = "notification_scope"

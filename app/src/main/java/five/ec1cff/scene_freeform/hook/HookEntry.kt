@@ -15,6 +15,8 @@ import com.highcapable.yukihookapi.hook.type.java.StringType
 import com.highcapable.yukihookapi.hook.xposed.bridge.YukiHookBridge
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
 import five.ec1cff.scene_freeform.BuildConfig
+import five.ec1cff.scene_freeform.bridge.CPBridge
+import five.ec1cff.scene_freeform.config.Constants
 import java.lang.Exception
 
 @InjectYukiHookWithXposed(isUsingResourcesHook = false, modulePackageName = BuildConfig.APPLICATION_ID)
@@ -23,49 +25,25 @@ class HookEntry: IYukiHookXposedInit {
     override fun onInit() {
         YukiHookAPI.Configs.apply {
             debugTag = "SceneFreeform"
-            isDebug = BuildConfig.DEBUG
+            isDebug = false // BuildConfig.DEBUG
             isEnableModulePrefsCache = false
         }
     }
 
     @OptIn(YukiGenerateApi::class)
     override fun onHook() = YukiHookAPI.encase {
-        loadApp("com.android.systemui") {
+        loadApp(Constants.SYSTEM_UI_PACKAGE) {
             YukiHookAPI.Configs.debugTag = "SceneFreeform:systemui"
             loadHooker(SystemUIHooker)
         }
         loadSystem {
             YukiHookAPI.Configs.debugTag = "SceneFreeform:system"
             loadHooker(SystemServerHooker)
-            ContextImplClass.hook {
-                injectMember {
-                    method {
-                        name = "sendBroadcast"
-                        param(IntentClass)
-                    }
-                    beforeHook {
-                        val intent = args[0] as? Intent
-                        if (intent?.action?.startsWith("yukihookapi.intent.action") == true)
-                            loggerD(msg = "server sent broadcast ${intent.action}")
-                    }
-                }
-            }
         }
         loadApp(BuildConfig.APPLICATION_ID) {
             // temporary fix for YukiHook
             YukiHookBridge.hookModuleAppStatus(appClassLoader, false)
-            ContextImplClass.hook {
-                injectMember {
-                    method {
-                        name = "setFilePermissionsFromMode"
-                    }
-                    beforeHook {
-                        if ((args[0] as String).endsWith("preferences.xml")) {
-                            args(1).set(Context.MODE_WORLD_READABLE)
-                        }
-                    }
-                }
-            }
         }
+        loadHooker(CPBridge.CPBridgeHooker)
     }
 }

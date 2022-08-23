@@ -3,10 +3,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="five.ec1cff.scene_freeform">
 
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
     <application
+        android:name="com.highcapable.yukihookapi.hook.xposed.application.ModuleApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:directBootAware="true"
@@ -16,18 +18,27 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SceneFreeform"
-        android:name="com.highcapable.yukihookapi.hook.xposed.application.ModuleApplication"
         tools:targetApi="31">
+        <provider
+            android:name=".config.ConfigProvider"
+            android:authorities="${configAuthority}"
+            android:enabled="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
+            android:directBootAware="true"
+            android:exported="true" />
+
         <activity
             android:name=".MainActivity"
-            android:launchMode="singleTop"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS" />
             </intent-filter>
         </activity>

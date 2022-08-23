@@ -8,8 +8,12 @@ import five.ec1cff.scene_freeform.GlideApp
 import five.ec1cff.scene_freeform.databinding.FragmentAppSelectorBinding
 import five.ec1cff.scene_freeform.viewmodels.AppItem
 
-class AppSelectorAdapter(private val checkedSet: HashSet<String>) : RecyclerView.Adapter<AppSelectorAdapter.ViewHolder>() {
+class AppSelectorAdapter(private val listener: OnCheckedChangedListener) : RecyclerView.Adapter<AppSelectorAdapter.ViewHolder>() {
     private var mList = listOf<AppItem>()
+
+    interface OnCheckedChangedListener {
+        fun onCheckedChanged(name: String, checked: Boolean)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
 
@@ -46,11 +50,10 @@ class AppSelectorAdapter(private val checkedSet: HashSet<String>) : RecyclerView
         val packageName = item.packageName
         binding.appName.text = item.label
         binding.appDesc.text = packageName
+        binding.itemCheckbox.isChecked = item.isChecked
         binding.itemCheckbox.setOnCheckedChangeListener { _, b ->
-            if (b) checkedSet.add(packageName)
-            else checkedSet.remove(packageName)
+            listener.onCheckedChanged(packageName, b)
         }
-        binding.itemCheckbox.isChecked = packageName in checkedSet
         GlideApp.with(binding.appIcon)
             .load(item.packageInfo)
             .into(binding.appIcon)
@@ -64,6 +67,7 @@ class AppSelectorAdapter(private val checkedSet: HashSet<String>) : RecyclerView
                 binding.itemRoot.setOnClickListener {
                     binding.itemCheckbox.toggle()
                 }
+                binding.itemCheckbox.setOnCheckedChangeListener { compoundButton, b ->  }
             }
     }
 

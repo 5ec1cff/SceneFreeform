@@ -8,7 +8,6 @@ import android.content.pm.PackageManagerHidden
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Binder
-import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
@@ -25,18 +24,24 @@ import com.highcapable.yukihookapi.hook.type.android.IntentClass
 import com.highcapable.yukihookapi.hook.type.java.BooleanType
 import com.highcapable.yukihookapi.hook.type.java.IntType
 import com.highcapable.yukihookapi.hook.type.java.StringType
-import de.robv.android.xposed.XposedHelpers
 import five.ec1cff.scene_freeform.*
+import five.ec1cff.scene_freeform.bridge.CPBridge
+import five.ec1cff.scene_freeform.bridge.IModuleApp
+import five.ec1cff.scene_freeform.bridge.ISystemServer
 import five.ec1cff.scene_freeform.config.Constants
+import five.ec1cff.scene_freeform.config.Constants.FOO_VIEW_PACKAGE_NAME
+import five.ec1cff.scene_freeform.config.Constants.QQ_PACKAGE_NAME
+import five.ec1cff.scene_freeform.config.Constants.SYSTEM_PACKAGE
+import five.ec1cff.scene_freeform.config.Constants.WECHAT_PACKAGE_NAME
 import java.lang.ref.WeakReference
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 
 object SystemServerHooker: YukiBaseHooker() {
-    private const val QQ_PACKAGE_NAME = "com.tencent.mobileqq"
-    private const val FOO_VIEW_PACKAGE_NAME = "com.fooview.android.fooview"
+
     /**
      * 在这段时间内 App 启动自身 activity 被认为是小窗模式
      */
@@ -76,17 +81,17 @@ object SystemServerHooker: YukiBaseHooker() {
     private val mFreeformPackages = ConcurrentHashMap<String, Long>()
 
     private val RESOLVER_COMPONENTS = listOf(
-        ComponentName("android", "com.android.internal.app.ChooserActivity"),
-        ComponentName("android", "com.android.internal.app.ResolverActivity"),
+        ComponentName(SYSTEM_PACKAGE, "com.android.internal.app.ChooserActivity"),
+        ComponentName(SYSTEM_PACKAGE, "com.android.internal.app.ResolverActivity"),
     )
 
     private val TARGET_PACKAGE_BLACKLIST = listOf(
-        "android",
+        SYSTEM_PACKAGE,
         "com.android.camera"
     )
 
     private val WECHAT_SHARE_SDK_COMPONENTS = listOf(
-        ComponentName("com.tencent.mm", "com.tencent.mm.plugin.base.stub.WXEntryActivity"), // Share activity of Wechat
+        ComponentName(WECHAT_PACKAGE_NAME, "com.tencent.mm.plugin.base.stub.WXEntryActivity"), // Share activity of Wechat
     )
 
     private fun needFixResult() = mFileSelectorEnabled || mQQShareEnabled
@@ -101,7 +106,7 @@ object SystemServerHooker: YukiBaseHooker() {
         }
     }
 
-    private fun addFreeformPackage(packageName: String) {
+    private fun addFreeformPackageInternal(packageName: String) {
         mFreeformPackages[packageName] = System.currentTimeMillis() + FREEFORM_PACKAGE_EXPIRES
     }
 
@@ -147,7 +152,7 @@ object SystemServerHooker: YukiBaseHooker() {
         if (intent.component == null) {
             if (mQQShareEnabled && callingPackage != QQ_PACKAGE_NAME && checkQQShareSDK(intent)) {
                 result = true
-                addFreeformPackage(QQ_PACKAGE_NAME)
+                addFreeformPackageInternal(QQ_PACKAGE_NAME)
                 if (resultTo != null) fixResultForActivity(resultTo, false)
                 reason = "QQShare"
             } else if (mFileSelectorEnabled && intent.action in FILE_SELECTOR_ACTIONS) {
@@ -200,7 +205,7 @@ object SystemServerHooker: YukiBaseHooker() {
                     true
                 } else false
                 if (isMatch) {
-                    addFreeformPackage(packageName)
+                    addFreeformPackageInternal(packageName)
                 }
                 isMatch
             }
@@ -284,7 +289,61 @@ object SystemServerHooker: YukiBaseHooker() {
         }
     }
 
+    @Synchronized
+    private fun updateConfigInternal(bundle: Bundle) {
+        (bundle.get(Constants.APP_JUMP) as? Boolean)?.also { mEnabled = it }
+        (bundle.get(Constants.APP_JUMP_SHARE) as? Boolean)?.also { mShareEnabled = it }
+        (bundle.get(Constants.APP_JUMP_BROWSER) as? Boolean)?.also { mBrowserEnabled = it }
+        (bundle.get(Constants.APP_JUMP_FILE_SELECTOR) as? Boolean)?.also { mFileSelectorEnabled = it }
+        (bundle.get(Constants.APP_JUMP_SETTINGS) as? Boolean)?.also { mSettingsEnabled = it }
+        (bundle.get(Constants.HANDLE_QQ_SHARE) as? Boolean)?.also { mQQShareEnabled = it }
+        (bundle.get(Constants.HANDLE_WECHAT_SHARE) as? Boolean)?.also { mWeChatShareEnabled = it }
+        (bundle.get(Constants.LANDSCAPE) as? Boolean)?.also { mLandscapeEnabled = it }
+        (bundle.get(Constants.APP_JUMP_SCOPE) as? ArrayList<String>)?.also {
+            mBlacklist.clear()
+            mBlacklist.addAll(it)
+        }
+        loggerD(msg = "mEnabled=$mEnabled, mBlacklist=$mBlacklist")
+    }
+
+    internal object BinderHandler : ISystemServer.Stub() {
+        override fun getVersion(): String = BuildConfig.VERSION_NAME
+
+        override fun updateConfig(bundle: Bundle) {
+            updateConfigInternal(bundle)
+        }
+
+        override fun requestReloadConfig() {
+            reloadConfig()
+        }
+
+        override fun addFreeformPackage(name: String) {
+            addFreeformPackageInternal(name)
+        }
+
+        override fun setPackageBlacklist(name: String, isBlacklist: Boolean) {
+            synchronized(SystemServerHooker) {
+                if (isBlacklist) mBlacklist.add(name)
+                else mBlacklist.remove(name)
+            }
+        }
+
+    }
+
+    private fun reloadConfig() {
+        executorService.submit {
+            kotlin.runCatching {
+                val moduleBridge = IModuleApp.Stub.asInterface(
+                    CPBridge.getBinderFromBridge(mContext, BuildConfig.CONFIG_AUTHORITY)
+                )
+                val b = moduleBridge.requireConfig(BuildConfig.VERSION_NAME, SYSTEM_PACKAGE)
+                updateConfigInternal(b)
+            }.onFailure { loggerE(msg = "reloadConfigForSystem", e = it) }
+        }
+    }
+
     override fun onHook() {
+        CPBridge.setBinderForBridge(BinderHandler.asBinder())
         onAppLifecycle {
             onConfigurationChanged { _, config ->
                 val orientation = config.orientation
@@ -292,12 +351,11 @@ object SystemServerHooker: YukiBaseHooker() {
             }
             registerReceiver(Intent.ACTION_BOOT_COMPLETED) { ctx, intent ->
                 val i = intent.getIntExtra("android.intent.extra.user_handle", -114514)
-                loggerD(msg = "boot completed:$i")
                 if (!isSystemStarted && i == 0) {
+                    reloadConfig()
                     updateBrowserPackages(ctx)
                     ctx.registerReceiver(object : BroadcastReceiver() {
                         override fun onReceive(ctx: Context, intent: Intent?) {
-                            loggerD(msg = "package monitor:$intent")
                             updateBrowserPackages(ctx)
                         }
                     }, IntentFilter().apply {
@@ -310,43 +368,7 @@ object SystemServerHooker: YukiBaseHooker() {
                     isSystemStarted = true
                 }
             }
-            // for systemui
-            registerReceiver(Constants.ACTION_ADD_FREEFORM_PACKAGE) { _, intent ->
-                intent.getStringExtra(Constants.EXTRA_PACKAGE)?.let {
-                    addFreeformPackage(it)
-                    loggerD(msg = "add freeform package $it from broadcast")
-                }
-            }
         }
-        dataChannel.wait(Constants.CHANNEL_DATA_GET_VERSION_SS) {
-            dataChannel.put(Constants.CHANNEL_DATA_GET_VERSION_SS, BuildConfig.VERSION_NAME)
-            loggerD(msg = "received get version from $it")
-        }
-        dataChannel.wait(Constants.CHANNEL_DATA_UPDATE_CONFIG) { bundle ->
-            (bundle.get(Constants.APP_JUMP) as? Boolean)?.also { mEnabled = it }
-            (bundle.get(Constants.APP_JUMP_SHARE) as? Boolean)?.also { mShareEnabled = it }
-            (bundle.get(Constants.APP_JUMP_BROWSER) as? Boolean)?.also { mBrowserEnabled = it }
-            (bundle.get(Constants.APP_JUMP_FILE_SELECTOR) as? Boolean)?.also { mFileSelectorEnabled = it }
-            (bundle.get(Constants.APP_JUMP_SETTINGS) as? Boolean)?.also { mSettingsEnabled = it }
-            (bundle.get(Constants.HANDLE_QQ_SHARE) as? Boolean)?.also { mQQShareEnabled = it }
-            (bundle.get(Constants.HANDLE_WECHAT_SHARE) as? Boolean)?.also { mWeChatShareEnabled = it }
-            (bundle.get(Constants.LANDSCAPE) as? Boolean)?.also { mLandscapeEnabled = it }
-            (bundle.get(Constants.APP_JUMP_SCOPE) as? HashSet<String>)?.also {
-                mBlacklist.clear()
-                mBlacklist.addAll(it)
-            }
-            loggerD(msg = "mEnabled=$mEnabled, mBlacklist=$mBlacklist")
-        }
-        mEnabled = prefs.getBoolean(Constants.APP_JUMP, false)
-        mShareEnabled = prefs.getBoolean(Constants.APP_JUMP_SHARE, false)
-        mBrowserEnabled = prefs.getBoolean(Constants.APP_JUMP_BROWSER, false)
-        mFileSelectorEnabled = prefs.getBoolean(Constants.APP_JUMP_FILE_SELECTOR, false)
-        mSettingsEnabled = prefs.getBoolean(Constants.APP_JUMP_SETTINGS, false)
-        mQQShareEnabled = prefs.getBoolean(Constants.HANDLE_QQ_SHARE, false)
-        mWeChatShareEnabled = prefs.getBoolean(Constants.HANDLE_WECHAT_SHARE, false)
-        mLandscapeEnabled = prefs.getBoolean(Constants.LANDSCAPE, false)
-        mBlacklist.addAll(prefs.getStringSet(Constants.APP_JUMP_SCOPE, setOf()))
-        loggerD(msg = "mEnabled=$mEnabled, mBlacklist=$mBlacklist")
         val classIApplicationThread = findClass("android.app.IApplicationThread").normalClass!!
         val classProfilerInfo = findClass("android.app.ProfilerInfo").normalClass!!
         // TODO: hook ActivityStarter
@@ -354,38 +376,21 @@ object SystemServerHooker: YukiBaseHooker() {
             injectMember {
                 method {
                     name = "startActivityAsUser"
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        param(
-                            classIApplicationThread, // caller
-                            StringType, // callingPackage 1
-                            StringType, // callingFeatureId
-                            IntentClass, // intent 3
-                            StringType, // resolvedType
-                            IBinderClass, // resultTo 5
-                            StringType, // resultWho
-                            IntType, // requestCode
-                            IntType, // startFlags
-                            classProfilerInfo, // ProfilerInfo
-                            BundleClass, // bOptions
-                            IntType, // userId 11
-                            BooleanType // validateIncomingUser
-                        )
-                    } else {
-                        param(
-                            classIApplicationThread, // caller
-                            StringType, // callingPackage 1
-                            IntentClass, // intent 2
-                            StringType, // resolvedType
-                            IBinderClass, // resultTo
-                            StringType, // resultWho
-                            IntType, // requestCode
-                            IntType, // startFlags
-                            classProfilerInfo, // ProfilerInfo
-                            BundleClass, // bOptions
-                            IntType, // userId
-                            BooleanType // validateIncomingUser
-                        )
-                    }
+                    param(
+                        classIApplicationThread, // caller
+                        StringType, // callingPackage 1
+                        StringType, // callingFeatureId
+                        IntentClass, // intent 3
+                        StringType, // resolvedType
+                        IBinderClass, // resultTo 5
+                        StringType, // resultWho
+                        IntType, // requestCode
+                        IntType, // startFlags
+                        classProfilerInfo, // ProfilerInfo
+                        BundleClass, // bOptions
+                        IntType, // userId 11
+                        BooleanType // validateIncomingUser
+                    )
                 }
                 beforeHook {
                     this.beforeHookCommon()
@@ -417,36 +422,20 @@ object SystemServerHooker: YukiBaseHooker() {
             injectMember {
                 method {
                     name = "startActivityAndWait"
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        param(
-                            classIApplicationThread, // caller
-                            StringType, // callingPackage 1
-                            StringType, // callingFeatureId
-                            IntentClass, // intent 3
-                            StringType, // resolvedType
-                            IBinderClass, // resultTo 5
-                            StringType, // resultWho
-                            IntType, // requestCode
-                            IntType, // flags
-                            classProfilerInfo, // ProfilerInfo
-                            BundleClass, // options
-                            IntType // userId 11
-                        )
-                    } else {
-                        param(
-                            classIApplicationThread, // caller
-                            StringType, // callingPackage
-                            IntentClass, // intent
-                            StringType, // resolvedType
-                            IBinderClass, // resultTo
-                            StringType, // resultWho
-                            IntType, // requestCode
-                            IntType, // flags
-                            classProfilerInfo, // ProfilerInfo
-                            BundleClass, // options
-                            IntType // userId
-                        )
-                    }
+                    param(
+                        classIApplicationThread, // caller
+                        StringType, // callingPackage 1
+                        StringType, // callingFeatureId
+                        IntentClass, // intent 3
+                        StringType, // resolvedType
+                        IBinderClass, // resultTo 5
+                        StringType, // resultWho
+                        IntType, // requestCode
+                        IntType, // flags
+                        classProfilerInfo, // ProfilerInfo
+                        BundleClass, // options
+                        IntType // userId 11
+                    )
                 }
                 beforeHook {
                     this.beforeHookCommon()
@@ -455,36 +444,20 @@ object SystemServerHooker: YukiBaseHooker() {
             injectMember {
                 method {
                     name = "startActivityWithConfig"
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        param(
-                            classIApplicationThread, // caller
-                            StringType, // callingPackage 1
-                            StringType, // callingFeatureId
-                            IntentClass, // intent 3
-                            StringType, // resolvedType
-                            IBinderClass, // resultTo 5
-                            StringType, // resultWho
-                            IntType, // requestCode
-                            IntType, // startFlags
-                            ConfigurationClass, // newConfig
-                            BundleClass, // options
-                            IntType // userId 11
-                        )
-                    } else {
-                        param(
-                            classIApplicationThread, // caller
-                            StringType, // callingPackage
-                            IntentClass, // intent
-                            StringType, // resolvedType
-                            IBinderClass, // resultTo
-                            StringType, // resultWho
-                            IntType, // requestCode
-                            IntType, // startFlags
-                            ConfigurationClass, // newConfig
-                            BundleClass, // options
-                            IntType // userId
-                        )
-                    }
+                    param(
+                        classIApplicationThread, // caller
+                        StringType, // callingPackage 1
+                        StringType, // callingFeatureId
+                        IntentClass, // intent 3
+                        StringType, // resolvedType
+                        IBinderClass, // resultTo 5
+                        StringType, // resultWho
+                        IntType, // requestCode
+                        IntType, // startFlags
+                        ConfigurationClass, // newConfig
+                        BundleClass, // options
+                        IntType // userId 11
+                    )
                 }
                 beforeHook {
                     this.beforeHookCommon()

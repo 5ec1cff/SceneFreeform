@@ -16,6 +16,12 @@ val keystoreProperties = if (keystorePropertiesFile.exists() && keystoreProperti
     }
 } else null
 
+fun com.android.build.api.dsl.ApplicationBuildType.injectProviderConfig(prefix: String) {
+    val configAuthority = "$prefix.config.provider"
+    manifestPlaceholders["configAuthority"] = configAuthority
+    buildConfigField("String", "CONFIG_AUTHORITY", "\"${configAuthority}\"")
+}
+
 android {
     if (keystoreProperties != null) {
         signingConfigs {
@@ -40,13 +46,17 @@ android {
         targetSdk = 32
         versionCode = 1
         versionName = "1.0"
+
+
     }
 
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            injectProviderConfig("${defaultConfig.applicationId}.debug")
         }
         release {
+            injectProviderConfig("${defaultConfig.applicationId}")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -90,7 +100,6 @@ dependencies {
 
     // Xposed API
     compileOnly("de.robv.android.xposed:api:82")
-    compileOnly("de.robv.android.xposed:api:82:sources")
     val yukiHookVersion: String by rootProject.extra
     implementation("com.highcapable.yukihookapi:api:$yukiHookVersion")
     ksp("com.highcapable.yukihookapi:ksp-xposed:$yukiHookVersion")
@@ -99,6 +108,12 @@ dependencies {
     compileOnly(project(":hidden_api_stub"))
     val hiddenApiRefineVersion: String by rootProject.extra
     implementation("dev.rikka.tools.refine:runtime:$hiddenApiRefineVersion")
+
+    // Room
+    val roomVersion = "2.4.3"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.3")

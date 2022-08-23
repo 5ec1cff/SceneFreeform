@@ -4,9 +4,14 @@ import android.app.ActivityManager
 import android.app.ActivityThread
 import android.app.TaskInfoHidden
 import android.content.Context
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Bundle
 import de.robv.android.xposed.XposedHelpers
+import java.util.concurrent.Executors
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 // frameworks/base/core/java/android/app/WindowConfiguration.java
 private const val ACTIVITY_TYPE_HOME = 2
@@ -42,3 +47,24 @@ fun Any?.getField(name: String): Any? = kotlin.runCatching {
 
 fun Any?.callMethod(name: String, vararg args: Any?): Any? =
     XposedHelpers.callMethod(this, name, *args)
+
+private val threadPool by lazy { Executors.newCachedThreadPool() }
+
+suspend fun Context.getInstalledPackagesAsync(flags: Int): List<PackageInfo> = suspendCoroutine {
+    threadPool.submit {
+        it.resume(packageManager.getInstalledPackages(flags))
+    }
+}
+
+suspend fun Context.checkPackageExistsAsync(name: String): Boolean = suspendCoroutine {
+    threadPool.submit {
+        try {
+            packageManager.getPackageInfo(name, 0)
+            it.resume(true)
+        } catch (e: PackageManager.NameNotFoundException) {
+            it.resume(false)
+        } catch (t: Throwable) {
+            it.resumeWithException(t)
+        }
+    }
+}

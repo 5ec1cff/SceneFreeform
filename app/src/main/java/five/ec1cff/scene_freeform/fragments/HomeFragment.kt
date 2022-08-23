@@ -18,7 +18,6 @@ import five.ec1cff.scene_freeform.viewmodels.RemoteStatus
 
 class HomeFragment: Fragment() {
     private lateinit var binding: FragmentHomeBinding
-    private val handler by lazy { Handler(Looper.getMainLooper()) }
     private val viewModel by activityViewModels<ModuleStatusViewModel>()
 
     override fun onCreateView(
@@ -49,22 +48,23 @@ class HomeFragment: Fragment() {
         if (!activated) {
             binding.systemStatus.visibility = View.GONE
             binding.systemUiStatus.visibility = View.GONE
-            viewModel.systemServerStatus.value = RemoteStatus(RemoteStatus.Status.TIMEOUT)
-            viewModel.systemUIStatus.value = RemoteStatus(RemoteStatus.Status.TIMEOUT)
+            viewModel.systemServerStatus.value = RemoteStatus(RemoteStatus.Status.UNKNOWN_ERROR)
+            viewModel.systemUIStatus.value = RemoteStatus(RemoteStatus.Status.UNKNOWN_ERROR)
             return
         }
-        viewModel.checkRemoteStatus(requireActivity(), handler)
+        if (viewModel.systemServerStatus.value == null || viewModel.systemUIStatus.value == null)
+            viewModel.checkRemoteStatus()
         viewModel.systemServerStatus.observe(viewLifecycleOwner) {
             binding.systemStatusSummary.text = when (it.status) {
                 RemoteStatus.Status.INJECTED -> context.getString(R.string.remote_injected, it.version)
                 RemoteStatus.Status.CHECKING -> context.getString(R.string.remote_checking)
                 RemoteStatus.Status.VERSION_NOT_MATCH -> context.getString(R.string.remote_version_mismatch, it.version)
-                RemoteStatus.Status.TIMEOUT -> context.getString(R.string.remote_not_injected)
+                RemoteStatus.Status.UNKNOWN_ERROR -> context.getString(R.string.remote_not_injected)
             }
             binding.systemStatus.setCardBackgroundColor(
                 MaterialColors.getColor(binding.systemStatus,
                     when (it.status) {
-                        RemoteStatus.Status.VERSION_NOT_MATCH, RemoteStatus.Status.TIMEOUT ->
+                        RemoteStatus.Status.VERSION_NOT_MATCH, RemoteStatus.Status.UNKNOWN_ERROR ->
                             com.google.android.material.R.attr.colorError
                         else -> com.google.android.material.R.attr.colorSecondary
                     }
@@ -83,12 +83,12 @@ class HomeFragment: Fragment() {
                 RemoteStatus.Status.INJECTED -> context.getString(R.string.remote_injected, it.version)
                 RemoteStatus.Status.CHECKING -> context.getString(R.string.remote_checking)
                 RemoteStatus.Status.VERSION_NOT_MATCH -> context.getString(R.string.remote_version_mismatch, it.version)
-                RemoteStatus.Status.TIMEOUT -> context.getString(R.string.remote_not_injected)
+                RemoteStatus.Status.UNKNOWN_ERROR -> context.getString(R.string.remote_not_injected)
             }
             binding.systemUiStatus.setCardBackgroundColor(
                 MaterialColors.getColor(binding.systemUiStatus,
                     when (it.status) {
-                        RemoteStatus.Status.VERSION_NOT_MATCH, RemoteStatus.Status.TIMEOUT ->
+                        RemoteStatus.Status.VERSION_NOT_MATCH, RemoteStatus.Status.UNKNOWN_ERROR ->
                             com.google.android.material.R.attr.colorError
                         else -> com.google.android.material.R.attr.colorTertiary
                     }
