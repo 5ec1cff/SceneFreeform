@@ -5,16 +5,13 @@ import android.content.*
 import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
-import android.os.Process
 import androidx.annotation.Keep
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
-import com.highcapable.yukihookapi.hook.log.loggerD
 import com.highcapable.yukihookapi.hook.log.loggerE
 import com.highcapable.yukihookapi.hook.type.android.IBinderClass
 import com.highcapable.yukihookapi.hook.type.android.ParcelClass
 import com.highcapable.yukihookapi.hook.type.java.IntType
 import five.ec1cff.scene_freeform.BuildConfig
-import five.ec1cff.scene_freeform.config.ConfigProvider
 import five.ec1cff.scene_freeform.config.Constants
 
 @Suppress("DiscouragedPrivateApi")
@@ -92,10 +89,13 @@ object CPBridge {
     }
 
     internal fun checkCallerPermission(token: PendingIntent?) {
+        val binderUid = Binder.getCallingUid()
+        // always allow root access
+        if (binderUid == 0) return
         if (token == null)
             throw SecurityException("Token is null!")
         val uid = token.creatorUid
-        if (uid != Binder.getCallingUid())
+        if (uid != binderUid)
             throw SecurityException("Binder calling uid does not match token's uid!")
         val packageName = token.creatorPackage
         if (packageName !in mWhitelistPackages)

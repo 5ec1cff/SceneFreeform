@@ -3,7 +3,10 @@ package five.ec1cff.scene_freeform.hook
 import android.app.ActivityManager
 import android.app.Application
 import android.app.PendingIntent
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.os.Bundle
 import android.service.notification.StatusBarNotification
@@ -22,9 +25,6 @@ import five.ec1cff.scene_freeform.bridge.ISystemUI
 import five.ec1cff.scene_freeform.config.Constants
 import java.util.*
 import java.util.concurrent.Executors
-import kotlin.collections.ArrayList
-import kotlin.collections.HashSet
-import kotlin.concurrent.thread
 
 object SystemUIHooker: YukiBaseHooker() {
     private var mEnabled = false
@@ -128,8 +128,12 @@ object SystemUIHooker: YukiBaseHooker() {
                     val notification = statusBarNotification.notification
                     val packageName = statusBarNotification.packageName
                     val intent = notification.contentIntent ?: notification.fullScreenIntent ?: return@beforeHook
+                    val shouldInject = mEnabled && packageName in whiteList &&
+                            activityManager.getRunningTasks(1)
+                                .firstOrNull()
+                                ?.let { it.isHome() || it.isPackage(packageName) } != true
                     synchronized(mFreeformPendingIntent) {
-                        mFreeformPendingIntent[intent] = if (mEnabled && packageName in whiteList) {
+                        mFreeformPendingIntent[intent] = if (shouldInject) {
                             loggerW(msg = "launch $packageName as freeform from notification")
                             kotlin.runCatching {
                                 systemBridge?.addFreeformPackage(packageName)
@@ -169,9 +173,6 @@ object SystemUIHooker: YukiBaseHooker() {
                         shouldInject = record.first
                         reason = "scope"
                     }
-                    shouldInject = shouldInject && !(activityManager.getRunningTasks(1)
-                        .firstOrNull()?.let { it.isHome() || it.isPackage(pkgName) } == true)
-                        .also { if (!it) reason = "taskIsHomeOrSelf" }
                     if (shouldInject) {
                         args(6).set(injectFreeFormOptions(args[6] as? Bundle?))
                     }
